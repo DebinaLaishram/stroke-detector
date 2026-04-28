@@ -26,3 +26,5 @@ clinical_output/
 Thumbs.db
 .vscode/
 .idea/
+examples/.ipynb_checkpoints/
+examples/demo_output/
