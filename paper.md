@@ -113,4 +113,14 @@ acquisitions and ADC maps.
   reported test-set numbers from the ISLES-2022 split and Stage 3
   checkpoint
 
+# AI Usage Disclosure
+
+Claude (Anthropic, claude-sonnet-4-6) was used to assist with code
+generation, test scaffolding, documentation drafting, and debugging.
+All AI-assisted outputs were reviewed, edited, and validated by the
+author. Core architectural decisions — the three-stage sequential
+training strategy, the GlobalPresenceHead design, and the preprocessing
+pipeline — were made by the author. The author remains fully responsible
+for the accuracy and correctness of all submitted materials.
+
 # References
