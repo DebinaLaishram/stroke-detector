@@ -1,0 +1,63 @@
+# configs/stage1.yaml
+# Stage 1: Segmentation pretraining
+# Goal: backbone learns lesion appearance from pixel-level mask supervision.
+# Run: python train_stroke.py --config configs/stage1.yaml
+
+experiment_name: "stroke-detection-isles22"
+run_name: "stage1_seg_pretrain"
+stage: 1
+
+# Paths
+root:      "data/ISLES-2022"
+split_csv: "data/ISLES-2022/isles_final_split.csv"
+output_dir: "checkpoints_stage1"
+
+# Data
+workers: 0
+seed: 2026
+spacing: [1.5, 1.5, 3.0]
+input_shape: [96, 96, 64]
+
+# Model
+base_channels: [16, 24, 32, 48]
+fpn_channels: 32
+cls_hidden: 64
+
+# Training
+lr: 3.0e-4
+max_epochs: 120
+accum_steps: 4
+amp: true
+use_weighted_sampler: true
+weight_positive_single: 1.0
+weight_positive_multi: 10.0
+weight_embolic: 2.0
+weight_negative: 1.0
+
+# Loss (stage 1 — only seg loss used, others ignored)
+lambda_seg: 1.0
+lambda_giou: 2.0
+lambda_l1: 5.0
+lambda_obj_bg: 0.05
+lambda_cls: 0.3
+pos_obj_weight: 3.0
+giou_warmup_epochs: 30   # ignored in stage 1
+
+# LR groups (stage 1 — all params train equally)
+backbone_lr_scale: 1.0   # full lr for backbone in stage 1
+cls_lr_scale: 1.0
+
+# Early stopping
+early_stop: true
+patience: 30
+min_delta: 1.0e-4
+
+# Validation
+nms_iou: 0.3
+val_topk: 64
+sens_score: 0.3
+sens_iou: 0.3
+monitor: "dice"          # stage 1 monitors Dice not mAP
+
+# Debug
+debug_print_epochs: 0

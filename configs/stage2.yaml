@@ -1,0 +1,71 @@
+# configs/stage2.yaml
+# Stage 2 v2: Detection fine-tuning with rebalanced sampling
+# Changes from v1:
+#   weight_negative:  1.0 -> 6.0  (fixes Specificity=0)
+#   weight_embolic:   2.0 -> 1.0  (reduces embolic dominance)
+#   weight_positive_multi: 10.0 -> 5.0 (less aggressive oversampling)
+#   lambda_cls: 0.3 -> 0.5  (more classification training signal)
+#   output_dir: checkpoints_stage2_v2 (keep v1 results safe)
+#   run_name updated for MLflow tracking
+#
+# Run: python train_stroke.py --config configs/stage2.yaml
+
+experiment_name: "stroke-detection-isles22"
+run_name: "stage2_v3_suppression_fix"
+stage: 2
+
+# Paths
+root:      "data/ISLES-2022"
+split_csv: "data/ISLES-2022/isles_final_split.csv"
+output_dir: "checkpoints_stage2"
+resume:    "checkpoints_stage1/best.pt"
+
+# Data
+workers: 0
+seed: 2026
+spacing: [1.5, 1.5, 3.0]
+input_shape: [96, 96, 64]
+
+# Model
+base_channels: [16, 24, 32, 48]
+fpn_channels: 32
+cls_hidden: 64
+
+# Training
+lr: 1.0e-4
+max_epochs: 200
+accum_steps: 4
+amp: true
+use_weighted_sampler: true
+weight_positive_single: 1.0
+weight_positive_multi:  5.0   # reduced from 10.0 — less aggressive oversampling
+weight_embolic:         1.0   # reduced from 2.0 — stop embolic dominating cls
+weight_negative:        6.0   # increased from 1.0 — fixes Specificity=0
+
+# Loss (stage 2)
+lambda_seg: 0.3
+lambda_giou: 2.0
+lambda_l1: 5.0
+lambda_obj_bg: 0.5    # increased from 0.05 — stronger suppression on negatives
+lambda_cls: 0.5               # increased from 0.3 — more cls training signal
+pos_obj_weight: 5.0   # increased from 3.0 — compensate for stronger suppression
+giou_warmup_epochs: 0
+
+# LR groups
+backbone_lr_scale: 0.1
+cls_lr_scale: 0.3
+
+# Early stopping
+early_stop: true
+patience: 50
+min_delta: 1.0e-4
+
+# Validation
+nms_iou: 0.3
+val_topk: 64
+sens_score: 0.3
+sens_iou: 0.3
+monitor: "mAP"
+
+# Debug
+debug_print_epochs: 0

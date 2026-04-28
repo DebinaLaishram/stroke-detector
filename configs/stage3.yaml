@@ -1,0 +1,87 @@
+# configs/stage3.yaml
+# Stage 3: Global Presence Head training
+# Goal: fix Specificity=0 by adding a dedicated stroke/no-stroke classifier.
+#
+# Design rationale
+# ----------------
+# Stage 2 objectness heads failed to suppress negatives because:
+#   - positive detection loss >> suppression loss
+#   - objectness serves dual purpose (localize AND suppress)
+#
+# Stage 3 separates these concerns:
+#   - Objectness heads: "where is the lesion?" (unchanged from stage 2)
+#   - GlobalPresenceHead: "is there a lesion at all?" (new, focused)
+#
+# Training strategy
+# -----------------
+# Load stage 2 best weights.
+# Freeze detection heads — they already localise well (mAP=0.88).
+# Train only:
+#   - GlobalPresenceHead (new, random init)
+#   - Classification head (improve subtype accuracy)
+#   - FPN + seg decoder (small lr, maintain quality)
+# Backbone: very slow (0.01x lr)
+#
+# Run: python train_stroke.py --config configs/stage3.yaml
+
+experiment_name: "stroke-detection-isles22"
+run_name: "stage3_presence_head"
+stage: 3
+
+# Paths
+root:      "data/ISLES-2022"
+split_csv: "data/ISLES-2022/isles_final_split.csv"
+output_dir: "checkpoints_stage3"
+resume:    "checkpoints_stage2/best.pt"   # load stage 2 weights
+
+# Data
+workers: 0
+seed: 2026
+spacing: [1.5, 1.5, 3.0]
+input_shape: [96, 96, 64]
+
+# Model
+base_channels: [16, 24, 32, 48]
+fpn_channels: 32
+cls_hidden: 64
+
+# Training — shorter run, presence head learns fast
+lr: 5.0e-5           # lower lr — stage 2 weights are already good
+max_epochs: 100
+accum_steps: 4
+amp: true
+use_weighted_sampler: true
+weight_positive_single: 1.0
+weight_positive_multi:  5.0
+weight_embolic:         1.0
+weight_negative:        6.0   # keep negatives well represented
+
+# Loss
+lambda_seg:      0.1    # reduced — seg already trained
+lambda_giou:     0.5    # reduced — detection already trained
+lambda_l1:       1.0    # reduced — detection already trained
+lambda_obj_bg:   0.5    # keep suppression active
+lambda_cls:      0.5    # classification improvement
+lambda_presence: 2.0    # HIGH — presence is the main focus of stage 3
+pos_obj_weight:  5.0
+giou_warmup_epochs: 0
+
+# LR groups — presence head and cls head train at full lr
+# detection heads train slowly (already converged)
+backbone_lr_scale: 0.01   # 5x slower than stage 2
+cls_lr_scale: 1.0          # full lr — improving classification
+
+# Early stopping
+early_stop: true
+patience: 30              # shorter patience — presence head converges fast
+min_delta: 1.0e-4
+
+# Validation — monitor Specificity now that it can be non-zero
+nms_iou: 0.3
+val_topk: 64
+sens_score: 0.3
+sens_iou: 0.3
+monitor: "mAP"            # still primary metric, but watch Specificity
+
+# Debug
+debug_print_epochs: 0
