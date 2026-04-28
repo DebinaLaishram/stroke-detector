@@ -56,6 +56,8 @@ preprocessing transform chain, so output NIfTI masks share the exact
 shape and affine of the input DWI and load directly in ITK-Snap or
 FSLeyes without co-registration.
 
+![Three-stage sequential training pipeline. The backbone and FPN are shared across all stages. Each stage adds one head with a dedicated learning objective, building on the frozen knowledge of the previous stage.](pipeline.svg)
+
 # Statement of Need
 
 Acute ischaemic stroke demands rapid diagnosis. Existing automated
