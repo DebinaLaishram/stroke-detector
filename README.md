@@ -126,7 +126,7 @@ python scripts/localize_stroke.py \
 
 ## Output format
 
-### JSON result file: `{subject}_result.json`
+### JSON result file: `result.json`
 
 ```json
 {
@@ -134,7 +134,7 @@ python scripts/localize_stroke.py \
   "has_lesion":    true,
   "confidence":    0.9998,
   "presence_conf": 0.8743,
-  "stroke_type":   "positive_single",
+  "stroke_type":   "focal",
   "center_vox":    [48, 52, 31],
   "bbox_vox":      [32, 38, 21, 64, 66, 41],
   "stroke_volumes": {
@@ -147,7 +147,7 @@ python scripts/localize_stroke.py \
 }
 ```
 
-Stroke type values: `positive_single`, `positive_multi`, `embolic`, `negative`
+Stroke type values: `focal`, `multi`, `embolic`, `negative`
 
 ### NIfTI output files
 
