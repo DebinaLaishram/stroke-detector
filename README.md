@@ -11,6 +11,18 @@ All outputs are in **native image space** — no co-registration required.
 
 ---
 
+## Design rationale
+
+StrokeDetector was explicitly designed for the 4 GB VRAM constraint typical of
+entry-level clinical workstation GPUs, using GroupNorm instead of BatchNorm,
+gradient accumulation to simulate larger batch sizes, and a 0.504M-parameter
+architecture significantly smaller than transformer-based alternatives. The
+pipeline uses DWI and ADC as the sole input modalities; FLAIR imaging, while
+useful for chronic infarct characterisation, does not reliably show acute
+ischaemia at stroke onset and was therefore excluded.
+
+---
+
 ## Installation
 
 Requires Python 3.9+ and PyTorch 2.0+.
@@ -75,7 +87,7 @@ result = run_inference(
 )
 
 print(result["has_lesion"])
-print(result["stroke_type"])
+print(result["subtype_str"])
 print(result["stroke_volumes"]["stroke_volume_dwi_ml"])
 ```
 
@@ -134,9 +146,12 @@ python scripts/localize_stroke.py \
   "has_lesion":    true,
   "confidence":    0.9998,
   "presence_conf": 0.8743,
-  "stroke_type":   "focal",
-  "center_vox":    [48, 52, 31],
-  "bbox_vox":      [32, 38, 21, 64, 66, 41],
+  "subtype":       0,
+  "subtype_str":   "focal",
+  "center_model":  [48.0, 52.0, 31.0],
+  "box_model":     [32.0, 38.0, 21.0, 64.0, 66.0, 41.0],
+  "modalities":    "DWI+ADC",
+  "seg_volume_ml": 14.2,
   "stroke_volumes": {
     "stroke_volume_dwi_ml":          14.2,
     "stroke_volume_adc_ml":          12.8,
@@ -147,7 +162,9 @@ python scripts/localize_stroke.py \
 }
 ```
 
-Stroke type values: `focal`, `multi`, `embolic`, `negative`
+`subtype_str` values: `focal`, `multi`, `embolic`, `negative`. The
+`subtype` field is the integer ID corresponding to that label
+(0=focal, 1=multi, 2=embolic, 3=negative).
 
 ### NIfTI output files
 
@@ -324,4 +341,4 @@ If you use StrokeDetector in your research please cite:
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for full text.
+MIT License. See [LICENSE.txt](LICENSE.txt) for full text.
