@@ -1,5 +1,7 @@
 # StrokeDetector
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20140900.svg)](https://doi.org/10.5281/zenodo.20140900)
+
 A lightweight three-stage deep learning pipeline for acute ischaemic stroke
 localisation, subtype classification, and infarct volume estimation from
 diffusion-weighted MRI (DWI) and ADC maps.
@@ -332,8 +334,9 @@ If you use StrokeDetector in your research please cite:
   title   = {StrokeDetector: A lightweight multi-output deep learning
              pipeline for ischaemic stroke analysis on diffusion-weighted MRI},
   year    = {2026},
-  url     = {https://github.com/DebinaLaishram/stroke-detector},
-  version = {0.1.0}
+  version = {0.1.1},
+  doi     = {10.5281/zenodo.20140900},
+  url     = {https://doi.org/10.5281/zenodo.20140900}
 }
 ```
 
