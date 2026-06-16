@@ -16,12 +16,15 @@ All outputs are in **native image space** — no co-registration required.
 ## Design rationale
 
 StrokeDetector was explicitly designed for the 4 GB VRAM constraint typical of
-entry-level clinical workstation GPUs, using GroupNorm instead of BatchNorm,
+low-resource research hardware, using GroupNorm instead of BatchNorm,
 gradient accumulation to simulate larger batch sizes, and a 0.504M-parameter
 architecture significantly smaller than transformer-based alternatives. The
 pipeline uses DWI and ADC as the sole input modalities; FLAIR imaging, while
 useful for chronic infarct characterisation, does not reliably show acute
 ischaemia at stroke onset and was therefore excluded.
+
+All outputs are intended for research and decision support, not for autonomous
+clinical use, and require radiologist review.
 
 ---
 
@@ -135,6 +138,7 @@ python scripts/localize_stroke.py \
 | `--target_b` | Target b-value for shell extraction | `1000` |
 | `--score_thresh` | Objectness confidence threshold | `0.3` |
 | `--seg_thresh` | Segmentation probability threshold | `0.5` |
+| `--min_seg_volume_ml` | Minimum lesion volume threshold (ml) | `0.15` |
 
 ---
 
@@ -168,6 +172,12 @@ python scripts/localize_stroke.py \
 `subtype` field is the integer ID corresponding to that label
 (0=focal, 1=multi, 2=embolic, 3=negative).
 
+> **Note:** Subtype classification is an exploratory output. Overall accuracy
+> is 36% on the ISLES-2022 test set, with F1=0.00 for multi-territorial and
+> negative classes due to class imbalance. Subtype predictions should be
+> treated with caution and not used for clinical decisions without further
+> validation on larger balanced cohorts.
+
 ### NIfTI output files
 
 | File | Description |
@@ -183,7 +193,8 @@ or FSLeyes — no registration required.
 
 ## Benchmark results
 
-Evaluated on the 36-case held-out ISLES-2022 test set.
+Evaluated on the 36-case held-out ISLES-2022 test set (custom patient-level
+split, seed=2026 — not the official ISLES-2022 challenge test set).
 
 | Metric | Value |
 |--------|-------|
@@ -199,6 +210,29 @@ Evaluated on the 36-case held-out ISLES-2022 test set.
 | TP / FN / FP / TN | 19 / 2 / 12 / 3 |
 | Model parameters | 0.504M |
 | Inference time | < 10 s (T400 4 GB GPU) |
+
+---
+
+## External validation
+
+StrokeDetector was evaluated on the ISLES 2015 SISS testing set
+(Maier et al., 2017), comprising 36 sub-acute ischaemic stroke cases from
+two European medical centres acquired between 2008 and 2014 — fully
+independent of ISLES-2022 in institution, scanner, voxel spacing (1 mm vs
+~2 mm), and stroke timepoint. The model was run in DWI-only mode as no ADC
+maps are available in this dataset.
+
+| Metric | Value |
+|--------|-------|
+| Detection rate | 94.4% (34/36 cases) |
+| Mean confidence | 0.996 |
+| Missed cases | 2 (volumes 0.135 ml and 0.014 ml, below 0.15 ml threshold) |
+| Dice | Not available (no ground truth masks) |
+
+The two missed cases had high detection confidence (0.995 and 0.9995) but
+predicted lesion volumes below the minimum size threshold. The threshold is
+user-configurable via `--min_seg_volume_ml` (default 0.15 ml). Per-case
+results are available in `results_isles2015/isles2015_summary.csv`.
 
 ---
 
@@ -274,12 +308,15 @@ training curves.
 ## Synthetic b-value utility
 
 This utility is for research on model behaviour under b-value protocol
-variation. It is not a validated generalisation capability.
+variation. It is **not** a validated generalisation capability.
 
-The pipeline is trained on ISLES-2022 b=1000 DWI only. Clinical protocols commonly use b=1200 or higher — this utility helps researchers evaluate how the model behaves under that shift. Preliminary results
-show that sensitivity approaches 1.0 while specificity drops toward 0.0 at
-higher synthetic b-values, consistent with increased signal contrast
-reducing both missed lesions and discriminability of negative cases.
+The pipeline is trained on ISLES-2022 b=1000 DWI only. Clinical protocols
+commonly use b=1200 or higher — this utility helps researchers evaluate how
+the model behaves under that shift. Preliminary results show that sensitivity
+approaches 1.0 while specificity drops toward 0.0 at higher synthetic
+b-values, consistent with increased signal contrast reducing discriminability
+of negative cases. This is a robustness warning, not evidence of protocol
+generalisation.
 
 ```bash
 # Step 1 — generate synthetic DWI at b=1500, 2000, 2500
@@ -306,14 +343,26 @@ python scripts/evaluate_synthetic_bvalue.py \
 - **Specificity (0.200):** The pipeline has a high false positive rate on
   negative cases. Detection heads fire on any restricted diffusion pattern
   including T2 shine-through and susceptibility artefacts. All results
-  require radiologist review.
+  require radiologist review. Analysis of false positive cases shows all 7
+  false positives have presence_prob between 0.501 and 0.508 — marginally
+  above the decision boundary — indicating insufficient calibration of the
+  presence head rather than grossly incorrect predictions.
 - **Training data:** Trained on ISLES-2022 (175 cases, b=1000 only).
   Performance on other protocols, field strengths, or scanner manufacturers
   has not been systematically validated.
-- **Subtype imbalance:** Only 8 training cases for the multi-territorial
-  subtype. Classification performance for this subtype is limited.
-- **No external validation:** Benchmark numbers are from internal
-  ISLES-2022 evaluation only.
+- **Subtype classification is exploratory:** Overall accuracy is 36% with
+  F1=0.00 for multi-territorial and negative classes. The model collapses
+  toward predicting embolic due to class imbalance. Only 8 training cases
+  exist for the multi-territorial subtype. Subtype predictions should be
+  treated as exploratory and not used for clinical or research decisions
+  without further validation on larger balanced cohorts.
+- **External validation:** StrokeDetector was evaluated on the ISLES 2015
+  SISS testing set (36 sub-acute stroke cases, DWI-only mode, different
+  scanners and protocol from training data), achieving a detection rate of
+  94.4% (34/36 cases) without retraining. Ground truth masks are not
+  publicly available for this dataset so Dice scores cannot be reported.
+  Large-scale external validation on independent clinical datasets remains
+  a priority for future work.
 
 ---
 
